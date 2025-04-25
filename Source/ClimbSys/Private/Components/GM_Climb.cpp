@@ -108,7 +108,7 @@ void UGM_Climb::StartClimbMovement(const FHitResult& ForwardHit, const FHitResul
 		WallNormal * Settings.Offset.Y;
 
 	Executer->SetActorLocation(TargetLocation);
-
+	DrawDebugSphere(GetWorld(), TargetLocation, 20.f, 32, FColor::Yellow, false, 5.f);
 	if (bUseWallNormalForRotation)
 	{
 		const FVector Forward = -WallNormal;

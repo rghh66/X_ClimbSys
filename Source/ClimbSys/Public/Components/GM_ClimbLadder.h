@@ -40,7 +40,7 @@ private:
 	UFUNCTION()
 	void OnClimbLadderFinishNotify(FName NotifyName, const FBranchingPointNotifyPayload& BranchingPointPayload);
 
-	void OverClimb(UAnimMontage* Montage, bool bInterrupted, ACharacter* Executer);
+	void OverClimb(UAnimMontage* Montage, bool bInterrupted);
 
 	void ResetClimbState();
 
@@ -56,7 +56,10 @@ public:
 
 private:
 	UPROPERTY(Transient)
-	EClimbState CurrentClimbState = EClimbState::None;
+	EClimbState CurrentClimbState;
+
+	UPROPERTY(Transient)
+	TWeakObjectPtr<UAnimInstance> CachedAnimInstance;
 
 	bool bIsPlayClimbMontage = false;
 };

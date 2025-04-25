@@ -65,6 +65,10 @@ void UGM_ClimbLadder::OnClimbLadderNotify(FName NotifyName, const FBranchingPoin
 
 void UGM_ClimbLadder::OnClimbLadderEnd(UAnimMontage* Montage, bool bInterrupted)
 {
+	if (CachedAnimInstance.IsValid())
+	{
+		CachedAnimInstance->OnPlayMontageNotifyBegin.RemoveDynamic(this, &UGM_ClimbLadder::OnClimbLadderNotify);
+	}
 	if (bInterrupted && CurrentState == EClimbLadderState::Climbing)
 	{
 		ResetClimbState();

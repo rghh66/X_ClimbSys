@@ -9,7 +9,7 @@
 DECLARE_LOG_CATEGORY_EXTERN(LogGM_ClimbLadder, All, All);
 
 UENUM()
-enum class EClimbState : uint8
+enum class EClimbLadderState : uint8
 {
 	None,
 	Climbing,
@@ -38,28 +38,34 @@ protected:
 
 private:
 	UFUNCTION()
-	void OnClimbLadderFinishNotify(FName NotifyName, const FBranchingPointNotifyPayload& BranchingPointPayload);
+	void OnClimbLadderNotify(FName NotifyName, const FBranchingPointNotifyPayload& BranchingPointPayload);
 
-	void OverClimb(UAnimMontage* Montage, bool bInterrupted);
+	void OnClimbLadderEnd(UAnimMontage* Montage, bool bInterrupted);
+
+	void OnClimbToTopEnd(UAnimMontage* Montage, bool bInterrupted);
 
 	void ResetClimbState();
 
 public:
 	UPROPERTY(EditAnywhere, Category = "GM|Climb Ladder")
-	bool bCanClimb;
+	bool bCanClimbLadder;
 
-	UPROPERTY(EditAnywhere, Category = "GM|Climb Ladder", meta = (EditCondition = "bCanClimb", EditConditionHides))
+	UPROPERTY(EditAnywhere, Category = "GM|Climb Ladder", meta = (EditCondition = "bCanClimbLadder", EditConditionHides))
 	TObjectPtr<UAnimMontage> ClimbLadderMontage;
 	
-	UPROPERTY(EditAnywhere, Category = "GM|Climb Ladder", meta = (EditCondition = "bCanClimb", EditConditionHides))
+	UPROPERTY(EditAnywhere, Category = "GM|Climb Ladder", meta = (EditCondition = "bCanClimbLadder", EditConditionHides))
+	FName ClimbLadderNotifyName;
+	
+	UPROPERTY(EditAnywhere, Category = "GM|Climb Ladder", meta = (EditCondition = "bCanClimbLadder", EditConditionHides))
+	FName ClimbStartSection;
+	
+	UPROPERTY(EditAnywhere, Category = "GM|Climb Ladder", meta = (EditCondition = "bCanClimbLadder", EditConditionHides))
 	TObjectPtr<UAnimMontage> ClimbLadderToTopMontage;
 
 private:
 	UPROPERTY(Transient)
-	EClimbState CurrentClimbState;
+	EClimbLadderState CurrentState;
 
 	UPROPERTY(Transient)
 	TWeakObjectPtr<UAnimInstance> CachedAnimInstance;
-
-	bool bIsPlayClimbMontage = false;
 };

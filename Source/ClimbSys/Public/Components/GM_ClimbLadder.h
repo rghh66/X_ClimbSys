@@ -8,7 +8,16 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogGM_ClimbLadder, All, All);
 
-UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
+UENUM()
+enum class EClimbState : uint8
+{
+	None,
+	Climbing,
+	ClimbingToTop,
+	Finished
+};
+
+UCLASS( ClassGroup=(GM), meta=(BlueprintSpawnableComponent) )
 class CLIMBSYS_API UGM_ClimbLadder : public UActorComponent
 {
 	GENERATED_BODY()
@@ -24,11 +33,16 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "GM|Climb Ladder")
 	void ClimbToTop();
 	
+protected:
+	void BeginDestroy() override;
+
 private:
 	UFUNCTION()
 	void OnClimbLadderFinishNotify(FName NotifyName, const FBranchingPointNotifyPayload& BranchingPointPayload);
 
 	void OverClimb(UAnimMontage* Montage, bool bInterrupted, ACharacter* Executer);
+
+	void ResetClimbState();
 
 public:
 	UPROPERTY(EditAnywhere, Category = "GM|Climb Ladder")
@@ -41,9 +55,8 @@ public:
 	TObjectPtr<UAnimMontage> ClimbLadderToTopMontage;
 
 private:
-	bool bIsClimbing;
+	UPROPERTY(Transient)
+	EClimbState CurrentClimbState = EClimbState::None;
 
-	bool bIsPlayClimbMontage;
-
-	bool bIsPlayClimbToTopMontage;
+	bool bIsPlayClimbMontage = false;
 };

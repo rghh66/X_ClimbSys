@@ -12,16 +12,13 @@ UGM_ClimbLadder::UGM_ClimbLadder()
 	PrimaryComponentTick.bCanEverTick = true;
 
 	bCanClimb = false;
-	bIsClimbing = false;
-	bIsPlayClimbMontage = false;
-	bIsPlayClimbToTopMontage = false;
 }
 
 void UGM_ClimbLadder::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	if (!bIsClimbing || bIsPlayClimbMontage || bIsPlayClimbToTopMontage)
+	if (!bCanClimb || CurrentClimbState != EClimbState::Climbing || bIsPlayClimbMontage)
 	{
 		return;
 	}
@@ -40,11 +37,12 @@ void UGM_ClimbLadder::TickComponent(float DeltaTime, ELevelTick TickType, FActor
 void UGM_ClimbLadder::OnClimbLadderFinishNotify(FName NotifyName, const FBranchingPointNotifyPayload& BranchingPointPayload)
 {
 	bIsPlayClimbMontage = false;
+	UE_LOG(LogGM_ClimbLadder, Log, TEXT("ClimbLadderFinish"));
 }
 
 void UGM_ClimbLadder::ClimbLadder()
 {
-	if (!bCanClimb)
+	if (!bCanClimb || CurrentClimbState != EClimbState::None)
 	{
 		return;
 	}
@@ -68,49 +66,65 @@ void UGM_ClimbLadder::ClimbLadder()
 	{
 		Movement->SetMovementMode(EMovementMode::MOVE_Flying);
 		AnimInstance->OnPlayMontageNotifyBegin.AddDynamic(this, &UGM_ClimbLadder::OnClimbLadderFinishNotify);
-		bIsClimbing = true;
+		CurrentClimbState = EClimbState::Climbing;
 	}
 }
 
 void UGM_ClimbLadder::ClimbToTop()
 {
-	if (!bCanClimb || !bIsClimbing)
+	if (!bCanClimb || CurrentClimbState != EClimbState::Climbing)
+	{
+		return;
+	}
+
+	ACharacter* Executer = Cast<ACharacter>(GetOwner());
+	check(IsValid(Executer));
+
+	UAnimInstance* AnimInstance = Executer->GetMesh()->GetAnimInstance();
+	if (!IsValid(AnimInstance)) 
+	{
+		UE_LOG(LogGM_ClimbLadder, Error, TEXT("AnimInstance is invalid!"));
+		return;
+	}
+	CurrentClimbState = EClimbState::ClimbingToTop;
+	AnimInstance->OnPlayMontageNotifyBegin.RemoveDynamic(this, &UGM_ClimbLadder::OnClimbLadderFinishNotify);
+	FOnMontageEnded OnToTopEnded;
+	OnToTopEnded.BindUObject(this, &UGM_ClimbLadder::OverClimb, Executer);
+	AnimInstance->Montage_Play(ClimbLadderToTopMontage);
+	AnimInstance->Montage_SetEndDelegate(OnToTopEnded, ClimbLadderToTopMontage);
+}
+
+void UGM_ClimbLadder::OverClimb(UAnimMontage* Montage, bool bInterrupted, ACharacter* Executer)
+{
+	if (!bCanClimb || CurrentClimbState != EClimbState::ClimbingToTop)
 	{
 		return;
 	}
 
 	bIsPlayClimbMontage = false;
 
-	ACharacter* Executer = Cast<ACharacter>(GetOwner());
-	check(IsValid(Executer));
+	ResetClimbState();
+}
 
-	if (UAnimInstance* AnimInstance = Executer->GetMesh()->GetAnimInstance(); IsValid(AnimInstance))
+void UGM_ClimbLadder::ResetClimbState()
+{
+	CurrentClimbState = EClimbState::None;
+
+	if (ACharacter* Executer = Cast<ACharacter>(GetOwner())) 
 	{
-		bIsPlayClimbToTopMontage = true;
-		AnimInstance->OnPlayMontageNotifyBegin.RemoveDynamic(this, &UGM_ClimbLadder::OnClimbLadderFinishNotify);
-		FOnMontageEnded OnToTopEnded;
-		OnToTopEnded.BindUObject(this, &UGM_ClimbLadder::OverClimb, Executer);
-		AnimInstance->Montage_Play(ClimbLadderToTopMontage);
-		AnimInstance->Montage_SetEndDelegate(OnToTopEnded, ClimbLadderToTopMontage);
-	}
-	else
-	{
-		check(false);
+		Executer->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
 	}
 }
 
-void UGM_ClimbLadder::OverClimb(UAnimMontage* Montage, bool bInterrupted, ACharacter* Executer)
+void UGM_ClimbLadder::BeginDestroy()
 {
-	if (!bCanClimb || !bIsClimbing)
-	{
-		return;
-	}
+	Super::BeginDestroy();
 
-	bIsPlayClimbToTopMontage = false;
-	bIsClimbing = false;
-
-	if (Executer && Executer->GetCharacterMovement())
+	if (ACharacter* Executer = Cast<ACharacter>(GetOwner())) 
 	{
-		Executer->GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
+		if (UAnimInstance* AnimInstance = Executer->GetMesh()->GetAnimInstance()) 
+		{
+			AnimInstance->OnPlayMontageNotifyBegin.RemoveAll(this);
+		}
 	}
 }
